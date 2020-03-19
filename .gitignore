@@ -1,0 +1,15 @@
+?grams
+*.tag
+*.cls
+*.txt
+vocab
+atoms
+*.model
+*.mdl
+*.log
+
+# experiment data
+wmt2017
+webnews
+
+__pycache__/
