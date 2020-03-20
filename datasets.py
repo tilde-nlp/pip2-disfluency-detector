@@ -28,7 +28,7 @@ class TaggingDataSet(torch.utils.data.IterableDataset):
         yield from self.parse()
 
     def parse(self):
-        chunksize=20000
+        chunksize=200000
         for chunk in pd.read_csv(self._file_path, chunksize=chunksize, header=None):
             for i in range(0,len(chunk),2):                 
                 tokens = np.array([self._vocab[x] for x in chunk.iloc[i,0].split()])
@@ -55,7 +55,7 @@ class ClsDataSet(torch.utils.data.IterableDataset):
         yield from self.parse()
 
     def parse(self):
-        chunksize=20000
+        chunksize=200000
         for chunk in pd.read_csv(self._file_path, chunksize=chunksize, header=None):
             for i in range(0,len(chunk),2):
                 line = chunk.iloc[i,0].split()

@@ -81,7 +81,7 @@ cls_batch_size = 172
 ntokens = len(input_vocab) # the size of vocabulary
 nclstokens = 4 + 1 # D0, D1, S0, S1 + PAD
 ntagtokens = 2 + 1 # O, D + PAD
-emsize = 200 # embedding dimension
+emsize = 512 # embedding dimension
 nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
 nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
@@ -96,7 +96,7 @@ model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize
 
 tag_criterion = nn.CrossEntropyLoss(ignore_index=0)
 cls_criterion = nn.CrossEntropyLoss(ignore_index=0)
-lr = 0.0001 # learning rate
+lr = 0.00005 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
@@ -104,6 +104,7 @@ import time
 def train(tag_data, cls_data, sched_interval):
     model.train() # Turn on the train mode
     total_loss = 0.
+    cls_loss = 0.
     start_time = time.time()
     tag_loader = DataLoader(tag_data, batch_size=tag_batch_size, collate_fn=pad_and_sort_tag_batch)
     cls_loader = DataLoader(cls_data, batch_size=cls_batch_size, collate_fn=pad_and_sort_cls_batch)
@@ -115,6 +116,7 @@ def train(tag_data, cls_data, sched_interval):
         optimizer.zero_grad()
         cls_output = model(data)[1]
         loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
+        cls_loss += loss.item()
 
         # tag loss
         sample = next(tag_batch)
@@ -130,7 +132,7 @@ def train(tag_data, cls_data, sched_interval):
 
         total_loss += loss.item()
 
-        if batch % sched_interval and batch > 0:
+        if batch % sched_interval == 0 and batch > 0:
             validate(model)
             model.train()
             scheduler.step()
@@ -138,13 +140,15 @@ def train(tag_data, cls_data, sched_interval):
         log_interval = 100
         if batch % log_interval == 0 and batch > 0:
             cur_loss = total_loss / log_interval
+            cls_loss = cls_loss / log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | '
                   'lr {:02.8f} | ms/batch {:5.2f} | '
-                  'loss {:5.5f} '.format(
+                  'loss {:5.5f}/{:5.5f} '.format(
                     epoch, batch, len(cls_data) // cls_batch_size, scheduler.get_lr()[0],
                     elapsed * 1000 / log_interval,
-                    cur_loss))
+                    cls_loss, cur_loss))
+            cls_loss = 0
             total_loss = 0
             start_time = time.time()
 
