@@ -27,16 +27,20 @@ class TransformerModel(nn.Module):
     def init_weights(self):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+        self.tag_decoder.bias.data.zero_()
+        self.tag_decoder.weight.data.uniform_(-initrange, initrange)
+        self.cls_decoder.bias.data.zero_()
+        self.cls_decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src):
-        # TODO: padding mask
-        src = self.encoder(src) * math.sqrt(self.ninp)
+        src_key_padding_mask = src == 0
+        src = self.encoder(src.to(torch.int64)) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, self.src_mask)
+        src = src.transpose(0,1)
+        output = self.transformer_encoder(src, src_key_padding_mask = src_key_padding_mask)
+        output = output.transpose(0,1)
         tag_output = self.tag_decoder(output)
-        cls_output = self.cls_decoder(output[0])
+        cls_output = self.cls_decoder(output[:,0,:])
         return tag_output, cls_output
 
 

@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from transformer import TransformerModel
 from torch.utils.data import DataLoader
 from datasets import CycledTaggingDataSet, TaggingDataSet, ClsDataSet
+import numpy as np
 
 ######################################################################
 # Load and batch data
@@ -109,18 +110,18 @@ def train(tag_data, cls_data, sched_interval):
     tag_batch = iter(tag_loader)
     for batch, sample in enumerate(cls_loader):
         # cls loss
-        data = sample[0].to(device)
-        targets = sample[1].to(device)
+        data = sample[0].to(torch.int64).to(device)
+        targets = sample[1].to(torch.int64).to(device)
         optimizer.zero_grad()
         cls_output = model(data)[1]
-        loss = cls_criterion(cls_output.view(-1, nclstokens), targets)
+        loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
 
         # tag loss
-        sample = next(tag_loader)
-        data = sample[0].to(device)
-        targets = sample[1].to(device)
+        sample = next(tag_batch)
+        data = sample[0].to(torch.int64).to(device)
+        targets = sample[1].to(torch.int64).to(device)
         tag_output = model(data)[0]
-        loss = tag_criterion(tag_output.view(-1, ntagtokens), targets)
+        loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
         
         loss = torch.mean(loss)
         loss.backward()
@@ -134,13 +135,13 @@ def train(tag_data, cls_data, sched_interval):
             model.train()
             scheduler.step()
 
-        log_interval = 200
+        log_interval = 100
         if batch % log_interval == 0 and batch > 0:
             cur_loss = total_loss / log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | '
-                  'lr {:02.2f} | ms/batch {:5.2f} | '
-                  'loss {:5.2f} '.format(
+                  'lr {:02.8f} | ms/batch {:5.2f} | '
+                  'loss {:5.5f} '.format(
                     epoch, batch, len(cls_data) // cls_batch_size, scheduler.get_lr()[0],
                     elapsed * 1000 / log_interval,
                     cur_loss))
@@ -165,17 +166,17 @@ def evaluate(eval_model, tag_data, cls_data):
         tag_batch = iter(tag_loader)
         for batch, sample in enumerate(cls_loader):
             # cls loss
-            data = sample[0].to(device)
-            targets = sample[1].to(device)
+            data = sample[0].to(torch.int64).to(device)
+            targets = sample[1].to(torch.int64).to(device)
             cls_output = model(data)[1]
-            loss = cls_criterion(cls_output.view(-1, nclstokens), targets)
+            loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
 
             # tag loss
-            sample = next(tag_loader)
-            data = sample[0].to(device)
-            targets = sample[1].to(device)
+            sample = next(tag_batch)
+            data = sample[0].to(torch.int64).to(device)
+            targets = sample[1].to(torch.int64).to(device)
             tag_output = model(data)[0]
-            loss += tag_criterion(tag_output.view(-1, ntagtokens), targets)
+            loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
 
             loss = torch.mean(loss)
 
@@ -192,13 +193,13 @@ best_model = None
 
 for epoch in range(1, epochs + 1):
     cls_data = ClsDataSet("train.cls", input_vocab)
-    tag_data = CycledDataSet("train.tag", input_vocab)
+    tag_data = CycledTaggingDataSet("train.tag", input_vocab)
     sched_step = len(cls_data) // cls_batch_size // 4
     epoch_start_time = time.time()
     train(tag_data, cls_data, sched_step)
     val_loss = validate(model)
     print('-' * 89)
-    print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} '
+    print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.5f} '
           .format(epoch, (time.time() - epoch_start_time), val_loss))
     print('-' * 89)
 

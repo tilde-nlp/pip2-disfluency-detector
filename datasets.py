@@ -41,7 +41,7 @@ class TaggingDataSet(torch.utils.data.IterableDataset):
         return self._size
 
 class CycledTaggingDataSet(TaggingDataSet):
-    def __iter__():
+    def __iter__(self):
        return cycle(self.parse())
 
 class ClsDataSet(torch.utils.data.IterableDataset):
@@ -69,5 +69,5 @@ class ClsDataSet(torch.utils.data.IterableDataset):
         return self._size
 
 class CycledClsDataSet(ClsDataSet):
-    def __iter__():
+    def __iter__(self):
        return cycle(self.parse())
