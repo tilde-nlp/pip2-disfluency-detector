@@ -185,7 +185,7 @@ def evaluate(eval_model, tag_data, cls_data):
             loss = torch.mean(loss)
 
             total_loss += loss.item()
-    return total_loss / (len(tag_data) + len(cls_data))
+    return total_loss / (len(cls_data) / cls_batch_size)
 
 ######################################################################
 # Loop over epochs. Save the model if the validation loss is the best
