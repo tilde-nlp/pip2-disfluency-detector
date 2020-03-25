@@ -16,6 +16,9 @@ import numpy as np
 input_vocab={x.strip():i for i,x in enumerate(open("vocab","r",encoding="utf8"))}
 input_vocab[""] = 0 # empty word
 
+reverse_vocab={i:x.strip() for i,x in enumerate(open("vocab","r",encoding="utf8"))}
+reverse_vocab[0] = "" # empty word
+
 def sort_batch(batch, targets, lengths):
     """
     Sort a minibatch by the length of the sequences with the longest sequences first
@@ -125,7 +128,7 @@ def train(tag_data, cls_data, sched_interval):
         tag_output = model(data)[0]
         loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
         
-        loss = torch.mean(loss)
+#        loss = torch.mean(loss)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
@@ -139,6 +142,9 @@ def train(tag_data, cls_data, sched_interval):
 
         log_interval = 100
         if batch % log_interval == 0 and batch > 0:
+            print([reverse_vocab[int(x)] for x in data[0]])
+            print(targets[0])
+            print(tag_output[0])
             cur_loss = total_loss / log_interval
             cls_loss = cls_loss / log_interval
             elapsed = time.time() - start_time

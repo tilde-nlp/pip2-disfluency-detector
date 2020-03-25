@@ -33,7 +33,7 @@ class TransformerModel(nn.Module):
 
     def forward(self, src):
         src_key_padding_mask = src == 0
-        src = self.encoder(src.to(torch.int64)) * math.sqrt(self.ninp)
+        src = self.encoder(src) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)
         src = src.transpose(0,1)
         output = self.transformer_encoder(src, src_key_padding_mask = src_key_padding_mask)

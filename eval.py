@@ -25,6 +25,9 @@ test_data = args.data
 input_vocab={x.strip():i for i,x in enumerate(open(model_dir+"/vocab","r",encoding="utf8"))}
 input_vocab[""] = 0 # empty word
 
+reverse_vocab={i:x.strip() for i,x in enumerate(open(model_dir+"/vocab","r",encoding="utf8"))}
+reverse_vocab[0] = "" # empty word
+
 def sort_batch(batch, targets, lengths):
     """
     Sort a minibatch by the length of the sequences with the longest sequences first
@@ -96,7 +99,16 @@ dropout = 0.1 # the dropout value
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 model = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout).to(device)
-model.load_state_dict(torch.load(model_dir+"/model.mdl"))
+state_dict = torch.load(model_dir+"/model.mdl",map_location='cpu')
+
+from collections import OrderedDict
+new_state_dict = OrderedDict()
+for k, v in state_dict.items():
+    if k.startswith("module."):
+        name = k[7:] # remove 'module.' of dataparallel
+    new_state_dict[name]=v
+
+model.load_state_dict(new_state_dict)
 
 import time
 
@@ -136,14 +148,19 @@ def validate(eval_model):
 def evaluate(eval_model, tag_data):
     tag_loader = DataLoader(tag_data, batch_size=tag_batch_size, collate_fn=pad_and_sort_tag_batch)
     eval_model.eval() # Turn on the evaluation mode
-    total_loss = 0.
     with torch.no_grad():
-        target_true = 0
+        target_true = 0.
+        predicted_true = 0.
+        correct_true = 0.
         for batch, sample in enumerate(tag_loader):
             data = sample[0].to(torch.int64).to(device)
             targets = sample[1].to(torch.int64).to(device)
-            tag_output = model(data)[0]
-            predicted_disfluencies = torch.argmax(tag_output, dim=1) == 2
+            tag_output = eval_model(data)[0]
+            print([reverse_vocab[int(x)] for x in data[1]])
+            print(targets[1])
+            print(tag_output[1])
+            sys.exit(0)
+            predicted_disfluencies = torch.argmax(tag_output, dim=2) == 2
             target_disfluencies = targets == 2
             target_true += torch.sum(target_disfluencies).float()
             predicted_true += torch.sum(predicted_disfluencies).float()
@@ -151,10 +168,11 @@ def evaluate(eval_model, tag_data):
 
     recall = correct_true / target_true
     precision = correct_true / predicted_true
-    f1_score = 2 * precission * recall / (precision + recall)
+    f1_score = 2 * precision * recall / (precision + recall)
 
     return precision, recall, f1_score
 
 
+print(validate(model))
 print(evaluate(model, TaggingDataSet(test_data, input_vocab)))
-#print(validate(model))
+
