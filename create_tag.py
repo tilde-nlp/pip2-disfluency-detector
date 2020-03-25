@@ -26,7 +26,7 @@ def get_random_line(filepath: str) -> str:
 
 
 def s_add(line, mgrams):
-    sample_size = random.randint(1,3)
+    sample_size = min(random.randint(1,3), len(line)+1)
     positions = random.sample(range(0, len(line)+1), sample_size)
     positions.sort()
     labels = ["O"] * len(line)
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     for line in sys.stdin:
         line = line.split()
-        if rand.choice([1,2]) == 2:
+        if random.choice([1,2]) == 2:
             line, labels = s_add(line, mgrams)
         else:
             labels = ["O"] * len(line)

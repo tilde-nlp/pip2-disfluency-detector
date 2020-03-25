@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import sys
 import random
@@ -5,7 +6,7 @@ import random
 from create_tag import s_add
 
 def s_del(line):
-    sample_size = random.randint(1,3)
+    sample_size = min(random.randint(1,3), len(line)-1)
     positions = random.sample(range(0, len(line)), sample_size)
     positions.sort() 
     deleted = 0   
@@ -50,7 +51,7 @@ if __name__ == "__main__":
                 print("1 [CLS] %s [SEP] %s" % (line2, line))
             else:
                 print("2 [CLS] %s [SEP] %s" % (line, line2))
-        eles:
+        else:
             if random.choice([1,2]) == 1:
                 print("3 [CLS] %s [SEP] %s" % (line2, line))
             else:
