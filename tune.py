@@ -86,7 +86,7 @@ model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize
 #
 
 tag_criterion = nn.CrossEntropyLoss(ignore_index=0)
-lr = 0.000005 # learning rate
+lr = 0.0001 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 

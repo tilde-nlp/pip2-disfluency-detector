@@ -90,14 +90,15 @@ nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.1 # the dropout value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)).to(device)
+transformer = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)
+model = nn.DataParallel(transformer).to(device)
 
 ######################################################################
 # Run the model
 # -------------
 #
 
-tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0.,1.,5.]).to(device))
+tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0.,1.,2.]).to(device))
 cls_criterion = nn.CrossEntropyLoss()
 lr = 0.0001 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -130,7 +131,7 @@ def train(tag_data, cls_data, sched_interval):
         
 #        loss = torch.mean(loss)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+#        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
         total_loss += loss.item()
@@ -216,8 +217,8 @@ for epoch in range(1, epochs + 1):
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
-        best_model = model
-        torch.save(model.state_dict(), "model.mdl")
+        best_model = model.module
+        torch.save(best_model.state_dict(), "model.mdl")
 
 
 

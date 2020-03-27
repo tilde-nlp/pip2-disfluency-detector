@@ -9,7 +9,7 @@ atoms:
 	echo "[CLS]" > atoms
 	echo "[SEP]" >> atoms
 
-%.tag: %.txt bpe.model atoms
+%.tag: %.txt bpe.model atoms 1grams
 	# line=`wc -l $< | cut -f1` ; \
 	# line=((line / 3)) ; \
         # head -n $line $< > tmp2 

@@ -28,7 +28,7 @@ def get_random_line(filepath: str) -> str:
 
 def s_add(line, mgrams):
     line = line.copy()
-    sample_size = min(random.randint(1,3), len(line)+1)
+    sample_size = min(random.randint(1,3), len(line))
     positions = random.sample(range(0, len(line)+1), sample_size)
     positions.sort()
     labels = ["O"] * len(line)
