@@ -143,10 +143,10 @@ def train(tag_data, cls_data, sched_interval):
 
         log_interval = 100
         if batch % log_interval == 0 and batch > 0:
-            for i,x in enumerate(data[10][1:]):
-                if x == 0: 
-                    break
-                print (reverse_vocab[int(x)], targets[10][i], tag_output[10][i])
+#            for i,x in enumerate(data[10][1:]):
+#                if x == 0: 
+#                    break
+#                print (reverse_vocab[int(x)], targets[10][i], tag_output[10][i])
             cur_loss = total_loss / log_interval
             cls_loss = cls_loss / log_interval
             elapsed = time.time() - start_time
@@ -200,7 +200,7 @@ def evaluate(eval_model, tag_data, cls_data):
 # we've seen so far. Adjust the learning rate after each epoch.
 
 best_val_loss = float("inf")
-epochs = 30 # The number of epochs
+epochs = 10 # The number of epochs
 best_model = None
 
 for epoch in range(1, epochs + 1):

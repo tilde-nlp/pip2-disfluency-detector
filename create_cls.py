@@ -42,7 +42,7 @@ if __name__ == "__main__":
     for line in sys.stdin:
         line = line.split()
         pert = random.choice([1,2])
-        if pert == 1:
+        if pert == 1 or len(line) <= 1:
             line2, labels = s_add(line, mgrams)
         else:
             line2 = s_del(line)
