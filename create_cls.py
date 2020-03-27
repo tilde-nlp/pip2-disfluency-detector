@@ -6,6 +6,7 @@ import random
 from create_tag import s_add
 
 def s_del(line):
+    line = line.copy()
     sample_size = min(random.randint(1,3), len(line)-1)
     positions = random.sample(range(0, len(line)), sample_size)
     positions.sort() 
@@ -45,6 +46,7 @@ if __name__ == "__main__":
             line2, labels = s_add(line, mgrams)
         else:
             line2 = s_del(line)
+        line = " ".join(line)
         line2 = " ".join(line2)
         if pert == 1:
             if random.choice([1,2]) == 1:

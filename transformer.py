@@ -38,7 +38,7 @@ class TransformerModel(nn.Module):
         src = src.transpose(0,1)
         output = self.transformer_encoder(src, src_key_padding_mask = src_key_padding_mask)
         output = output.transpose(0,1)
-        tag_output = self.tag_decoder(output)
+        tag_output = self.tag_decoder(output[:,1:,:])
         cls_output = self.cls_decoder(output[:,0,:])
         return tag_output, cls_output
 

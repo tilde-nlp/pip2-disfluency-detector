@@ -59,10 +59,10 @@ def pad_and_sort_tag_batch(DataLoaderBatch):
     max_length = max(lengths)
 
     padded_seqs = np.zeros((batch_size, max_length))
-    padded_targs = np.zeros((batch_size, max_length))
+    padded_targs = np.zeros((batch_size, max_length-1))
     for i, l in enumerate(lengths):
         padded_seqs[i, 0:l] = seqs[i][0:l]
-        padded_targs[i, 0:l] = targs[i][0:l]
+        padded_targs[i, 0:l-1] = targs[i][0:l-1] # target does not include label for [CLS]
 
     return sort_batch(torch.tensor(padded_seqs), torch.tensor(padded_targs), torch.tensor(lengths))
 
@@ -82,7 +82,7 @@ cls_batch_size = 172
 #
 
 ntokens = len(input_vocab) # the size of vocabulary
-nclstokens = 4 + 1 # D0, D1, S0, S1 + PAD
+nclstokens = 4 # D0, D1, S0, S1
 ntagtokens = 2 + 1 # O, D + PAD
 emsize = 512 # embedding dimension
 nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
@@ -97,9 +97,9 @@ model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize
 # -------------
 #
 
-tag_criterion = nn.CrossEntropyLoss(ignore_index=0)
-cls_criterion = nn.CrossEntropyLoss(ignore_index=0)
-lr = 0.00005 # learning rate
+tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0.,1.,5.]).to(device))
+cls_criterion = nn.CrossEntropyLoss()
+lr = 0.0001 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
@@ -142,9 +142,10 @@ def train(tag_data, cls_data, sched_interval):
 
         log_interval = 100
         if batch % log_interval == 0 and batch > 0:
-            print([reverse_vocab[int(x)] for x in data[0]])
-            print(targets[0])
-            print(tag_output[0])
+            for i,x in enumerate(data[10][1:]):
+                if x == 0: 
+                    break
+                print (reverse_vocab[int(x)], targets[10][i], tag_output[10][i])
             cur_loss = total_loss / log_interval
             cls_loss = cls_loss / log_interval
             elapsed = time.time() - start_time
