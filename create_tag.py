@@ -77,11 +77,13 @@ if __name__ == "__main__":
     mgrams = ["%dgrams" % (i+1) for i in range(0,max_order)]
 
     for line in sys.stdin:
-        line = line.split()
+        line = line.strip().split()
+        if not line:
+            continue
         if random.choice([1,2]) == 2:
             line, labels = s_add(line, mgrams)
         else:
-            labels = ["O"] * len(line)
+            labels = ["O"] * len(line)         
         line = " ".join(line)
         labels = " ".join(labels)
         print("[CLS] %s" % line)

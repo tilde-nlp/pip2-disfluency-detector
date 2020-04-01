@@ -31,7 +31,7 @@ class TaggingDataSet(torch.utils.data.IterableDataset):
         chunksize=200000
         for chunk in pd.read_csv(self._file_path, chunksize=chunksize, header=None):
             for i in range(0,len(chunk),2):                 
-                tokens = np.array([self._vocab[x] for x in chunk.iloc[i,0].split()])
+                tokens = np.array([self._vocab.get(x, 1) for x in chunk.iloc[i,0].split()])
                 tags = np.array([2 if x=="D" else 1 for x in chunk.iloc[i+1,0].split()])
                 if len(tokens) > 128 or len(tokens) < 3:
                     continue
@@ -59,7 +59,7 @@ class ClsDataSet(torch.utils.data.IterableDataset):
         for chunk in pd.read_csv(self._file_path, chunksize=chunksize, header=None):
             for i in range(0,len(chunk),2):
                 line = chunk.iloc[i,0].split()
-                tokens = np.array([self._vocab[x] for x in line[1:]])
+                tokens = np.array([self._vocab.get(x,1) for x in line[1:]])
                 cls = np.array([int(line[0])-1])
                 if len(tokens) > 128 or len(tokens) < 3:
                     continue

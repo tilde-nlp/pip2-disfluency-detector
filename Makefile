@@ -29,4 +29,5 @@ atoms:
 	rm tmp tmp2
 
 vocab: dev.tag dev.cls test.tag train.tag train.cls
-	cat dev.tag dev.cls test.tag train.tag train.cls | $(TOOLS)/text/dict.py | cut -f1 | sort > vocab
+	cat dev.tag dev.cls test.tag train.tag train.cls | $(TOOLS)/text/dict.py |\
+	$(TOOLS)/text/dict_truncate.sh 95 | cut -f1 | sort > vocab

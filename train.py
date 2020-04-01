@@ -13,11 +13,13 @@ import numpy as np
 # -------------------
 #
 
-input_vocab={x.strip():i for i,x in enumerate(open("vocab","r",encoding="utf8"))}
+input_vocab={x.strip():i for i,x in enumerate(open("vocab","r",encoding="utf8"), 2)}
 input_vocab[""] = 0 # empty word
+input_vocab["<unk>"] = 1 # unknown word
 
-reverse_vocab={i:x.strip() for i,x in enumerate(open("vocab","r",encoding="utf8"))}
+reverse_vocab={i:x.strip() for i,x in enumerate(open("vocab","r",encoding="utf8"), 2)}
 reverse_vocab[0] = "" # empty word
+reverse_vocab[1] = "<unk>" # empty word
 
 def sort_batch(batch, targets, lengths):
     """
@@ -100,7 +102,8 @@ model = nn.DataParallel(transformer).to(device)
 
 tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0.,1.,2.]).to(device))
 cls_criterion = nn.CrossEntropyLoss()
-lr = 0.0001 # learning rate
+#lr = 0.0001 # learning rate
+lr = 0.00005 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
@@ -129,9 +132,9 @@ def train(tag_data, cls_data, sched_interval):
         tag_output = model(data)[0]
         loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
         
-#        loss = torch.mean(loss)
+        loss = torch.mean(loss)
         loss.backward()
-#        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
         total_loss += loss.item()

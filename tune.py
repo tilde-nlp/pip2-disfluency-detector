@@ -23,8 +23,13 @@ tune_data = args.data
 # -------------------
 #
 
-input_vocab={x.strip():i for i,x in enumerate(open("%s/vocab"%model_dir,"r",encoding="utf8"))}
+input_vocab={x.strip():i for i,x in enumerate(open(model_dir+"/vocab","r",encoding="utf8"), 2)}
 input_vocab[""] = 0 # empty word
+input_vocab["<unk>"] = 1 # unknown word
+
+reverse_vocab={i:x.strip() for i,x in enumerate(open(model_dir+"/vocab","r",encoding="utf8"), 2)}
+reverse_vocab[0] = "" # empty word
+reverse_vocab[1] = "<unk>" # empty word
 
 def sort_batch(batch, targets, lengths):
     """
@@ -70,7 +75,7 @@ tag_batch_size = 32
 #
 
 ntokens = len(input_vocab) # the size of vocabulary
-nclstokens = 4 + 1 # D0, D1, S0, S1 + PAD
+nclstokens = 4 # D0, D1, S0, S1
 ntagtokens = 2 + 1 # O, D + PAD
 emsize = 512 # embedding dimension
 nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
@@ -86,7 +91,7 @@ model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize
 #
 
 tag_criterion = nn.CrossEntropyLoss(ignore_index=0)
-lr = 0.0001 # learning rate
+lr = 0.00001 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
