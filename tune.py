@@ -54,10 +54,10 @@ def pad_and_sort_tag_batch(DataLoaderBatch):
     max_length = max(lengths)
 
     padded_seqs = np.zeros((batch_size, max_length))
-    padded_targs = np.zeros((batch_size, max_length))
+    padded_targs = np.zeros((batch_size, max_length-1))
     for i, l in enumerate(lengths):
         padded_seqs[i, 0:l] = seqs[i][0:l]
-        padded_targs[i, 0:l] = targs[i][0:l]
+        padded_targs[i, 0:l-1] = targs[i][0:l-1]
 
     return sort_batch(torch.tensor(padded_seqs), torch.tensor(padded_targs), torch.tensor(lengths))
 
@@ -90,8 +90,8 @@ model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize
 # -------------
 #
 
-tag_criterion = nn.CrossEntropyLoss(ignore_index=0)
-lr = 0.00001 # learning rate
+tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0., 1., 2.]).to(device))
+lr = 0.000005 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
@@ -118,14 +118,14 @@ def train(tag_data, sched_interval):
         if batch % sched_interval == 0 and batch > 0:
             scheduler.step()
 
-        log_interval = 100
+        log_interval = 10
         if batch % log_interval == 0 and batch > 0:
             cur_loss = total_loss / log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | '
                   'lr {:02.8f} | ms/batch {:5.2f} | '
                   'loss {:5.5f} '.format(
-                    epoch, batch, len(cls_data) // cls_batch_size, scheduler.get_lr()[0],
+                    epoch, batch, len(tag_data) // tag_batch_size, scheduler.get_lr()[0],
                     elapsed * 1000 / log_interval,
                     cur_loss))
             total_loss = 0
@@ -141,7 +141,7 @@ for epoch in range(1, epochs + 1):
     data = TaggingDataSet(tune_data, input_vocab)
     sched_step = len(data) // tag_batch_size // 4
     epoch_start_time = time.time()
-    train(tag_data, sched_step)
+    train(data, sched_step)
     print('-' * 89)
     print('| end of epoch {:3d} | time: {:5.2f}s  '
           .format(epoch, (time.time() - epoch_start_time)))

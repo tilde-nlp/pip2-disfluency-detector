@@ -95,12 +95,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 transformer = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)
 model = nn.DataParallel(transformer).to(device)
 
+# save random init model
+torch.save(transformer.state_dict(), "init.mdl")
+
 ######################################################################
 # Run the model
 # -------------
 #
 
-tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0.,1.,2.]).to(device))
+tag_criterion = nn.CrossEntropyLoss(ignore_index=0)#, weight=torch.tensor([0.,1.,2.]).to(device))
 cls_criterion = nn.CrossEntropyLoss()
 #lr = 0.0001 # learning rate
 lr = 0.00005 # learning rate
@@ -113,8 +116,6 @@ def train(tag_data, cls_data, sched_interval):
     total_loss = 0.
     cls_loss = 0.
     start_time = time.time()
-    tag_loader = DataLoader(tag_data, batch_size=tag_batch_size, collate_fn=pad_and_sort_tag_batch)
-    cls_loader = DataLoader(cls_data, batch_size=cls_batch_size, collate_fn=pad_and_sort_cls_batch)
     tag_batch = iter(tag_loader)
     for batch, sample in enumerate(cls_loader):
         # cls loss
@@ -206,9 +207,13 @@ best_val_loss = float("inf")
 epochs = 10 # The number of epochs
 best_model = None
 
+tag_data = CycledTaggingDataSet("train.tag", input_vocab)
+tag_loader = DataLoader(tag_data, batch_size=tag_batch_size, collate_fn=pad_and_sort_tag_batch)
+
 for epoch in range(1, epochs + 1):
+    # re-open cls training data, to reset iterator
     cls_data = ClsDataSet("train.cls", input_vocab)
-    tag_data = CycledTaggingDataSet("train.tag", input_vocab)
+    cls_loader = DataLoader(cls_data, batch_size=cls_batch_size, collate_fn=pad_and_sort_cls_batch)
     sched_step = len(cls_data) // cls_batch_size // 4
     epoch_start_time = time.time()
     train(tag_data, cls_data, sched_step)
@@ -223,5 +228,6 @@ for epoch in range(1, epochs + 1):
         best_model = model.module
         torch.save(best_model.state_dict(), "model.mdl")
 
-
+# save the final model too
+torch.save(transformer.state_dict(), "final.mdl")
 
