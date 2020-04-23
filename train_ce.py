@@ -85,7 +85,7 @@ cls_batch_size = 172
 
 ntokens = len(input_vocab) # the size of vocabulary
 nclstokens = 4 # D0, D1, S0, S1
-ntagtokens = 1 # Binary classification O or D
+ntagtokens = 2 + 1 # O, D + PAD
 emsize = 512 # embedding dimension
 nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
 nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
@@ -103,6 +103,7 @@ torch.save(transformer.state_dict(), "init.mdl")
 # -------------
 #
 
+tag_criterion = nn.CrossEntropyLoss(ignore_index=0)#, weight=torch.tensor([0.,1.,2.]).to(device))
 cls_criterion = nn.CrossEntropyLoss()
 #lr = 0.0001 # learning rate
 lr = 0.00005 # learning rate
@@ -128,15 +129,11 @@ def train(tag_data, cls_data, sched_interval):
         # tag loss
         sample = next(tag_batch)
         data = sample[0].to(torch.int64).to(device)
-        targets = sample[1].to(torch.int64)
-        mask = (targets != 0).float().flatten().to(device)
-        targets_flat = (targets == 2).float().to(device).view(-1)
-#        print(torch.sum(targets_flat) / torch.sum(mask))
+        targets = sample[1].to(torch.int64).to(device)
         tag_output = model(data)[0]
-        tag_criterion = nn.BCEWithLogitsLoss(weight=mask,pos_weight=torch.tensor(5.).to(device))
-        loss += tag_criterion(tag_output.view(-1), targets_flat)
+        loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
         
-#        loss = torch.mean(loss)
+        loss = torch.mean(loss)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
@@ -153,7 +150,7 @@ def train(tag_data, cls_data, sched_interval):
 #            for i,x in enumerate(data[10][1:]):
 #                if x == 0: 
 #                    break
-#                print (reverse_vocab[int(x)], targets[10][i], torch.sigmoid(tag_output[10][i]))
+#                print (reverse_vocab[int(x)], targets[10][i], tag_output[10][i])
             cur_loss = total_loss / log_interval
             cls_loss = cls_loss / log_interval
             elapsed = time.time() - start_time
@@ -193,24 +190,21 @@ def evaluate(eval_model, tag_data, cls_data):
             # tag loss
             sample = next(tag_batch)
             data = sample[0].to(torch.int64).to(device)
-            targets = sample[1].to(torch.int64)
-            mask = (targets != 0).float().flatten().to(device)
-            targets_flat = (targets == 2).float().to(device).view(-1)
+            targets = sample[1].to(torch.int64).to(device)
             tag_output = model(data)[0]
-            tag_criterion = nn.BCEWithLogitsLoss(weight=mask)
-            loss += tag_criterion(tag_output.view(-1), targets_flat)
+            loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
 
-#            loss = torch.mean(loss)
+            loss = torch.mean(loss)
 
             total_loss += loss.item()
-    return total_loss
+    return total_loss / (len(cls_data) / cls_batch_size)
 
 ######################################################################
 # Loop over epochs. Save the model if the validation loss is the best
 # we've seen so far. Adjust the learning rate after each epoch.
 
 best_val_loss = float("inf")
-epochs = 30 # The number of epochs
+epochs = 10 # The number of epochs
 best_model = None
 
 tag_data = CycledTaggingDataSet("train.tag", input_vocab)

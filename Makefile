@@ -31,3 +31,8 @@ atoms:
 vocab: dev.tag dev.cls test.tag train.tag train.cls
 	cat dev.tag dev.cls test.tag train.tag train.cls | $(TOOLS)/text/dict.py |\
 	$(TOOLS)/text/dict_truncate.sh 95 | cut -f1 | sort > vocab
+
+%.testtag: %.txt bpe.model atoms
+	./prepare_tag.py < $< |\
+	$(TOOLS)/text/segmentation/subword-nmt/apply_bpe.py -c bpe.model --atoms atoms |\
+	./fix_bpe_tags.py > $@

@@ -92,7 +92,7 @@ tag_batch_size = 32
 
 ntokens = len(input_vocab) # the size of vocabulary
 nclstokens = 4 # D0, D1, S0, S1 + PAD
-ntagtokens = 1 # binary O or D
+ntagtokens = 2 + 1 # O, D + PAD
 emsize = 512 # embedding dimension
 nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
 nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
@@ -138,12 +138,9 @@ def validate(eval_model):
             # tag loss
             sample = next(tag_batch)
             data = sample[0].to(torch.int64).to(device)
-            targets = sample[1].to(torch.int64)
-            mask = (targets != 0).float().flatten().to(device)
-            targets_flat = (targets == 2).float().to(device).view(-1)
+            targets = sample[1].to(torch.int64).to(device)
             tag_output = model(data)[0]
-            tag_criterion = nn.BCEWithLogitsLoss(weight=mask)
-            loss += tag_criterion(tag_output.view(-1), targets_flat)
+            loss += tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
 
             loss = torch.mean(loss)
 
@@ -161,10 +158,9 @@ def evaluate(eval_model, tag_data):
         correct_true = 0.
         for batch, sample in enumerate(tag_loader):
             data = sample[0].to(torch.int64).to(device)
-            targets = sample[1].to(torch.int64).to(device).view(-1)
+            targets = sample[1].to(torch.int64).to(device)
             tag_output = eval_model(data)[0]
-            tag_output = torch.round(torch.sigmoid(tag_output)).view(-1)
-            predicted_disfluencies = tag_output == 1
+            predicted_disfluencies = torch.argmax(tag_output, dim=2) == 2
             target_disfluencies = targets == 2
             target_true += torch.sum(target_disfluencies).float()
             predicted_true += torch.sum(predicted_disfluencies).float()

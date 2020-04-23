@@ -76,7 +76,7 @@ tag_batch_size = 32
 
 ntokens = len(input_vocab) # the size of vocabulary
 nclstokens = 4 # D0, D1, S0, S1
-ntagtokens = 1 # binary O or D
+ntagtokens = 2 + 1 # O, D + PAD
 emsize = 512 # embedding dimension
 nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
 nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
@@ -90,7 +90,8 @@ model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize
 # -------------
 #
 
-lr = 0.00005 # learning rate
+tag_criterion = nn.CrossEntropyLoss(ignore_index=0, weight=torch.tensor([0., 1., 2.]).to(device))
+lr = 0.000005 # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
@@ -105,11 +106,9 @@ def train(tag_data, sched_interval):
         data = sample[0].to(torch.int64).to(device)
         targets = sample[1].to(torch.int64).to(device)
         tag_output = model(data)[0]
-        mask = (targets != 0).float().flatten().to(device)
-        targets_flat = (targets == 2).float().to(device).view(-1)
-        tag_criterion = nn.BCEWithLogitsLoss(weight=mask,pos_weight=torch.tensor(1.).to(device))
-        loss = tag_criterion(tag_output.view(-1), targets_flat)
+        loss = tag_criterion(tag_output.view(-1, ntagtokens), targets.view(-1))
         
+        loss = torch.mean(loss)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
