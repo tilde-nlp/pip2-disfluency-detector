@@ -18,6 +18,7 @@ args = parser.parse_args()
 model_dir = args.model_dir
 tune_data = args.data
 
+torch.manual_seed(0)
 ######################################################################
 # Load and batch data
 # -------------------
@@ -73,7 +74,7 @@ tag_batch_size = 32
 # The model is set up with the hyperparameter below. The vocab size is
 # equal to the length of the vocab object.
 #
-
+#
 ntokens = len(input_vocab) # the size of vocabulary
 nclstokens = 4 # D0, D1, S0, S1
 ntagtokens = 1 # binary O or D
@@ -83,8 +84,12 @@ nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.1 # the dropout value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = nn.DataParallel(TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)).to(device)
+transformer = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)
+transformer.load_state_dict(torch.load(model_dir+"/model.mdl"))
+model = transformer.to(device)
 
+
+import time
 ######################################################################
 # Run the model
 # -------------
@@ -149,6 +154,3 @@ for epoch in range(1, epochs + 1):
     print('-' * 89)
 
 torch.save(model.state_dict(), "%s/tune.mdl" % model_dir)
-
-
-
