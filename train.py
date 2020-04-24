@@ -7,6 +7,15 @@ from transformer import TransformerModel
 from torch.utils.data import DataLoader
 from datasets import CycledTaggingDataSet, TaggingDataSet, ClsDataSet
 import numpy as np
+import argparse
+
+parser = argparse.ArgumentParser(description='Train disfluency detector on self-supervised data')
+parser.add_argument('model', help='load model to continue training', nargs='?', default = None)
+parser.add_argument('--lr', help='initial learning rate', default = '0.00005')
+
+args = parser.parse_args()
+
+model = args.model
 
 ######################################################################
 # Load and batch data
@@ -93,6 +102,8 @@ nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.1 # the dropout value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 transformer = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)
+if args.model:
+    transformer.load_state_dict(torch.load(args.model))
 model = nn.DataParallel(transformer).to(device)
 
 # save random init model
@@ -104,8 +115,7 @@ torch.save(transformer.state_dict(), "init.mdl")
 #
 
 cls_criterion = nn.CrossEntropyLoss()
-#lr = 0.0001 # learning rate
-lr = 0.00005 # learning rate
+lr = float(args.lr) # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
@@ -234,6 +244,9 @@ for epoch in range(1, epochs + 1):
         best_model = model.module
         torch.save(best_model.state_dict(), "model.mdl")
 
-# save the final model too
-torch.save(transformer.state_dict(), "final.mdl")
+    if epoch % 10 == 0:
+        torch.save(transformer.state_dict(), "%s.mdl" % epoch)
+
+    # save the final model too
+    torch.save(transformer.state_dict(), "final.mdl")
 
