@@ -68,7 +68,7 @@ def s_add(line, mgrams):
            
 
 if __name__ == "__main__": 
-    parser = argparse.ArgumentParser(description='Created synthetic data for classification task')
+    parser = argparse.ArgumentParser(description='Created synthetic data for tagging task')
     parser.add_argument('order', help='model to test')
     args = parser.parse_args()
 

@@ -13,6 +13,7 @@ class TransformerModel(nn.Module):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
+        self.src_mask = None
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout, activation="gelu")
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
@@ -23,6 +24,11 @@ class TransformerModel(nn.Module):
 
         self.init_weights()
 
+    def _generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
     def init_weights(self):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
@@ -32,11 +38,16 @@ class TransformerModel(nn.Module):
         self.cls_decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src):
+        if self.src_mask is None or self.src_mask.size(0) != src.size(1):
+            device = src.device
+            mask = self._generate_square_subsequent_mask(src.size(1)).to(device)
+            self.src_mask = mask
+
         src_key_padding_mask = src == 0
         src = self.encoder(src) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)
         src = src.transpose(0,1)
-        output = self.transformer_encoder(src, src_key_padding_mask = src_key_padding_mask)
+        output = self.transformer_encoder(src, self.src_mask)#, src_key_padding_mask = src_key_padding_mask)
         output = output.transpose(0,1)
         tag_output = self.tag_decoder(output[:,1:,:])
         cls_output = self.cls_decoder(output[:,0,:])

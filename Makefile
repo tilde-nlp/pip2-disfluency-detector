@@ -1,4 +1,5 @@
 TOOLS=/data/Projekti/tools
+SHELL=/bin/bash
 
 1grams 2grams 3grams 4grams 5grams 6grams: train.txt
 	$(TOOLS)/text/parallel/run.sh train.txt 4 "$(TOOLS)/text/normalizer.py -n -c -l -r lv" |\
@@ -28,9 +29,9 @@ atoms:
 	$(TOOLS)/text/parallel/run.sh tmp2 4 "$(TOOLS)/text/segmentation/subword-nmt/apply_bpe.py -c bpe.model --atoms atoms" > $@
 	rm tmp tmp2
 
-vocab: dev.tag dev.cls test.tag train.tag train.cls
-	cat dev.tag dev.cls test.tag train.tag train.cls | $(TOOLS)/text/dict.py |\
-	$(TOOLS)/text/dict_truncate.sh 95 | cut -f1 | sort > vocab
+vocab: train.tag train.cls
+	cat <(sed -n "1~2p" train.tag) <(cut -f2- -d" " train.cls) | $(TOOLS)/text/dict.py | grep -v "[CLS]" | grep -v "[SEP]" |\
+	$(TOOLS)/text/dict_truncate.sh 99 | cut -f1 | sort > vocab
 
 %.testtag: %.txt bpe.model atoms
 	./prepare_tag.py < $< |\

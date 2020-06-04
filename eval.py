@@ -12,6 +12,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Test disfluency detector on labelled data')
 parser.add_argument('model_dir', help='model to test')
 parser.add_argument('data', help='test data in tagging format')
+parser.add_argument('--iter', default="model.mdl", help='model iteration')
 
 args = parser.parse_args()
 
@@ -101,7 +102,7 @@ dropout = 0.1 # the dropout value
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 model = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout).to(device)
-state_dict = torch.load(model_dir+"/model.mdl",map_location='cpu')
+state_dict = torch.load("%s/%s" % (model_dir, args.iter),map_location='cpu')
 
 from collections import OrderedDict
 new_state_dict = OrderedDict()
@@ -126,6 +127,8 @@ def validate(eval_model):
     cls_loader = DataLoader(cls_data, batch_size=172, collate_fn=pad_and_sort_cls_batch)
     eval_model.eval() # Turn on the evaluation mode
     total_loss = 0.
+    total_cls_loss = 0.
+    total_tag_loss = 0.
     with torch.no_grad():
         tag_batch = iter(tag_loader)
         for batch, sample in enumerate(cls_loader):
@@ -134,6 +137,7 @@ def validate(eval_model):
             targets = sample[1].to(torch.int64).to(device)
             cls_output = model(data)[1]
             loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
+            total_cls_loss += loss.item()
 
             # tag loss
             sample = next(tag_batch)
@@ -143,14 +147,15 @@ def validate(eval_model):
             targets_flat = (targets == 2).float().to(device).view(-1)
             tag_output = model(data)[0]
             tag_criterion = nn.BCEWithLogitsLoss(weight=mask)
-            loss += tag_criterion(tag_output.view(-1), targets_flat)
+            tag_loss = tag_criterion(tag_output.view(-1), targets_flat)
 
-            loss = torch.mean(loss)
+            loss = torch.mean(loss+tag_loss)
 
             total_loss += loss.item()
+            total_tag_loss += tag_loss.item()
     loss = total_loss
        
-    return loss
+    return loss, total_cls_loss, total_tag_loss
 
 def evaluate(eval_model, tag_data):
     tag_loader = DataLoader(tag_data, batch_size=tag_batch_size, collate_fn=pad_and_sort_tag_batch)
@@ -160,15 +165,25 @@ def evaluate(eval_model, tag_data):
         predicted_true = 0.
         correct_true = 0.
         for batch, sample in enumerate(tag_loader):
+
             data = sample[0].to(torch.int64).to(device)
-            targets = sample[1].to(torch.int64).to(device).view(-1)
+            targets = sample[1].to(torch.int64).to(device)
             tag_output = eval_model(data)[0]
-            tag_output = torch.round(torch.sigmoid(tag_output)).view(-1)
-            predicted_disfluencies = tag_output == 1
-            target_disfluencies = targets == 2
+
+#            for i,x in enumerate(data[-1][1:]):
+#                if x == 0: 
+#                    break
+#                print (reverse_vocab[int(x)], targets[-1][i], torch.round(torch.sigmoid(tag_output[-1][i])))
+
+            tag_output = torch.sigmoid(tag_output).view(-1)
+            mask = (targets != 0).float().view(-1)
+            predicted_disfluencies = (tag_output > 0.5) * mask
+            target_disfluencies = targets.view(-1) == 2
             target_true += torch.sum(target_disfluencies).float()
             predicted_true += torch.sum(predicted_disfluencies).float()
             correct_true += torch.sum(target_disfluencies * predicted_disfluencies).float()
+
+
 
     recall = correct_true / target_true
     precision = correct_true / predicted_true

@@ -104,10 +104,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 transformer = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)
 if args.model:
     transformer.load_state_dict(torch.load(args.model))
+else:
+    # save random init model
+    torch.save(transformer.state_dict(), "init.mdl")
 model = nn.DataParallel(transformer).to(device)
 
-# save random init model
-torch.save(transformer.state_dict(), "init.mdl")
+
 
 ######################################################################
 # Run the model
@@ -131,9 +133,9 @@ def train(tag_data, cls_data, sched_interval):
         data = sample[0].to(torch.int64).to(device)
         targets = sample[1].to(torch.int64).to(device)
         optimizer.zero_grad()
-        cls_output = model(data)[1]
-        loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
-        cls_loss += loss.item()
+#        cls_output = model(data)[1]
+#        loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
+#        cls_loss += loss.item()
 
         # tag loss
         sample = next(tag_batch)
@@ -141,10 +143,9 @@ def train(tag_data, cls_data, sched_interval):
         targets = sample[1].to(torch.int64)
         mask = (targets != 0).float().flatten().to(device)
         targets_flat = (targets == 2).float().to(device).view(-1)
-#        print(torch.sum(targets_flat) / torch.sum(mask))
         tag_output = model(data)[0]
-        tag_criterion = nn.BCEWithLogitsLoss(weight=mask,pos_weight=torch.tensor(5.).to(device))
-        loss += tag_criterion(tag_output.view(-1), targets_flat)
+        tag_criterion = nn.BCEWithLogitsLoss(weight=mask)#,pos_weight=torch.tensor(2.).to(device))
+        loss = tag_criterion(tag_output.view(-1), targets_flat)
         
 #        loss = torch.mean(loss)
         loss.backward()
@@ -159,23 +160,29 @@ def train(tag_data, cls_data, sched_interval):
             scheduler.step()
 
         log_interval = 100
+        if batch % 1000 == 0 and batch > 0:
+            for i,x in enumerate(data[10][1:]):
+                if x == 0: 
+                    break
+                print (reverse_vocab[int(x)], targets[10][i], torch.sigmoid(tag_output[10][i]))
+
         if batch % log_interval == 0 and batch > 0:
-#            for i,x in enumerate(data[10][1:]):
-#                if x == 0: 
-#                    break
-#                print (reverse_vocab[int(x)], targets[10][i], torch.sigmoid(tag_output[10][i]))
             cur_loss = total_loss / log_interval
             cls_loss = cls_loss / log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | '
                   'lr {:02.8f} | ms/batch {:5.2f} | '
-                  'loss {:5.5f}/{:5.5f} '.format(
+                  'loss {:5.5f}/{:5.5f}/{:5.5f} '.format(
                     epoch, batch, len(cls_data) // cls_batch_size, scheduler.get_lr()[0],
                     elapsed * 1000 / log_interval,
-                    cls_loss, cur_loss))
+                    cur_loss - cls_loss, cls_loss, cur_loss))
             cls_loss = 0
             total_loss = 0
             start_time = time.time()
+
+            # save the final model iteration
+            torch.save(transformer.state_dict(), "final.mdl")
+
 
 
 def validate(eval_model):
@@ -220,7 +227,7 @@ def evaluate(eval_model, tag_data, cls_data):
 # we've seen so far. Adjust the learning rate after each epoch.
 
 best_val_loss = float("inf")
-epochs = 30 # The number of epochs
+epochs = 50 # The number of epochs
 best_model = None
 
 tag_data = CycledTaggingDataSet("train.tag", input_vocab)
@@ -244,9 +251,6 @@ for epoch in range(1, epochs + 1):
         best_model = model.module
         torch.save(best_model.state_dict(), "model.mdl")
 
-    if epoch % 10 == 0:
-        torch.save(transformer.state_dict(), "%s.mdl" % epoch)
-
-    # save the final model too
-    torch.save(transformer.state_dict(), "final.mdl")
+#    if epoch % 10 == 0:
+    torch.save(transformer.state_dict(), "%s.mdl" % epoch)
 

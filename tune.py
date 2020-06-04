@@ -12,6 +12,8 @@ import argparse
 parser = argparse.ArgumentParser(description='Fine-tune disfluency detector on labelled data')
 parser.add_argument('model_dir', help='model to fine tune')
 parser.add_argument('data', help='fine-tune data in tagging format')
+parser.add_argument('--iter', default="model.mdl", help='model iteration')
+parser.add_argument('--lr', help='initial learning rate', default = '0.000005')
 
 args = parser.parse_args()
 
@@ -85,7 +87,7 @@ nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.1 # the dropout value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 transformer = TransformerModel(ntokens, nclstokens, ntagtokens, emsize, nhead, nhid, nlayers, dropout)
-transformer.load_state_dict(torch.load(model_dir+"/model.mdl"))
+transformer.load_state_dict(torch.load("%s/%s"%(model_dir, args.iter)))
 model = transformer.to(device)
 
 
@@ -95,7 +97,7 @@ import time
 # -------------
 #
 
-lr = 0.00005 # learning rate
+lr = float(args.lr) # learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.995)
 
