@@ -160,11 +160,11 @@ def train(tag_data, cls_data, sched_interval):
             scheduler.step()
 
         log_interval = 100
-        if batch % 1000 == 0 and batch > 0:
-            for i,x in enumerate(data[10][1:]):
-                if x == 0: 
-                    break
-                print (reverse_vocab[int(x)], targets[10][i], torch.sigmoid(tag_output[10][i]))
+#        if batch % 1000 == 0 and batch > 0:
+#            for i,x in enumerate(data[10][1:]):
+#                if x == 0: 
+#                    break
+#                print (reverse_vocab[int(x)], targets[10][i], torch.sigmoid(tag_output[10][i]))
 
         if batch % log_interval == 0 and batch > 0:
             cur_loss = total_loss / log_interval
@@ -181,7 +181,7 @@ def train(tag_data, cls_data, sched_interval):
             start_time = time.time()
 
             # save the final model iteration
-            torch.save(transformer.state_dict(), "final.mdl")
+            # torch.save(transformer.state_dict(), "final.mdl")
 
 
 
