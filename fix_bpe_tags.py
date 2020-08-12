@@ -15,8 +15,8 @@ if __name__ == "__main__":
             labels = line.split()
             i = 0
             newlabels = []
-            # for each word except [CLS] at the beginning
-            for w in words[1:]: 
+            # for each word except [CLS] at the end
+            for w in words[:-1]: 
                 newlabels.append(labels[i])
                 if not w.endswith("@@"):
                     i += 1

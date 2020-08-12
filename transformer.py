@@ -38,9 +38,11 @@ class TransformerModel(nn.Module):
         self.cls_decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src):
-        if self.src_mask is None or self.src_mask.size(0) != src.size(1):
+        if self.src_mask is None or self.src_mask.size(0) != src.size(1):            
             device = src.device
             mask = self._generate_square_subsequent_mask(src.size(1)).to(device)
+            if self.src_mask is not None:
+                del self.src_mask
             self.src_mask = mask
 
         src_key_padding_mask = src == 0
@@ -49,8 +51,8 @@ class TransformerModel(nn.Module):
         src = src.transpose(0,1)
         output = self.transformer_encoder(src, self.src_mask)#, src_key_padding_mask = src_key_padding_mask)
         output = output.transpose(0,1)
-        tag_output = self.tag_decoder(output[:,1:,:])
-        cls_output = self.cls_decoder(output[:,0,:])
+        tag_output = self.tag_decoder(output[:,:-1,:])
+        cls_output = self.cls_decoder(output[:,-1,:])
         return tag_output, cls_output
 
 

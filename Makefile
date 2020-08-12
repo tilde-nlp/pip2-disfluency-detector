@@ -11,9 +11,9 @@ atoms:
 	echo "[SEP]" >> atoms
 
 %.tag: %.txt bpe.model atoms 1grams
-	# line=`wc -l $< | cut -f1` ; \
-	# line=((line / 3)) ; \
-        # head -n $line $< > tmp2 
+	#line=`wc -l $< | cut -f1` ; \
+	#line=((line / 3)) ; \
+        #head -n $line $< > tmp2 
 	$(TOOLS)/text/parallel/run.sh $< 4 "$(TOOLS)/text/normalizer.py -n -c -l -r lv" > tmp
 	$(TOOLS)/text/parallel/run.sh tmp 4 "./create_tag.py 6" > tmp2
 	$(TOOLS)/text/parallel/run.sh tmp2 4 "$(TOOLS)/text/segmentation/subword-nmt/apply_bpe.py -c bpe.model --atoms atoms" |\
@@ -29,11 +29,23 @@ atoms:
 	$(TOOLS)/text/parallel/run.sh tmp2 4 "$(TOOLS)/text/segmentation/subword-nmt/apply_bpe.py -c bpe.model --atoms atoms" > $@
 	rm tmp tmp2
 
-vocab: train.tag train.cls
-	cat <(sed -n "1~2p" train.tag) <(cut -f2- -d" " train.cls) | $(TOOLS)/text/dict.py | grep -v "[CLS]" | grep -v "[SEP]" |\
-	$(TOOLS)/text/dict_truncate.sh 99 | cut -f1 | sort > vocab
+vocab: bpe.model atoms chars
+#	cat <(sed -n "1~2p" train.tag) <(cut -f2- -d" " train.cls) | $(TOOLS)/text/dict.py |\
+#	cut -f1 | sort > vocab
+#	$(TOOLS)/text/dict_truncate.sh 99 | cut -f1 | sort > vocab
+	tail -n +2 bpe.model | sed "s/ //;s/$$/@@/" | sed "s;</w>@@;;" > vocab
+	cat chars >> vocab
+	cat atoms >> vocab
+	sort -u -o vocab vocab
+
+
 
 %.testtag: %.txt bpe.model atoms
-	./prepare_tag.py < $< |\
+	./prepare_tag.py < $< > tmp
+	sed -n "1~2p" < tmp |\
+	$(TOOLS)/text/normalizer.py -n -c -l -r lv |\
+	sed "s/$$/ [CLS]/" |\
+	paste -d "\n" - <(sed -n "0~2p" tmp) |\
 	$(TOOLS)/text/segmentation/subword-nmt/apply_bpe.py -c bpe.model --atoms atoms |\
 	./fix_bpe_tags.py > $@
+	rm tmp

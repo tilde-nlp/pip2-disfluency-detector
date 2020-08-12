@@ -86,7 +86,7 @@ if __name__ == "__main__":
             labels = ["O"] * len(line)         
         line = " ".join(line)
         labels = " ".join(labels)
-        print("[CLS] %s" % line)
+        print("%s [CLS]" % line)
         print("%s" % labels)
 
     

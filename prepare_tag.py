@@ -9,7 +9,7 @@ for line in sys.stdin:
     if len(tokens) < 2:
         continue
 
-    words = ["[CLS]"]
+    words = []
     labels = []
     for token in tokens:
         token = token.split(":")
@@ -20,6 +20,7 @@ for line in sys.stdin:
         label = token[1]
         words.append(word)
         labels.append("D" if label == "D" else "O")
+    words.append("[CLS]")
 
     print (" ".join(words))
     print (" ".join(labels))

@@ -1,5 +1,7 @@
 ?grams
 *.tag
+*.testtag
+*.modeltag
 *.cls
 *.txt
 vocab

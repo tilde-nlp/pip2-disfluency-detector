@@ -50,12 +50,12 @@ if __name__ == "__main__":
         line2 = " ".join(line2)
         if pert == 1:
             if random.choice([1,2]) == 1:
-                print("1 [CLS] %s [SEP] %s" % (line2, line))
+                print("1 %s [SEP] %s [CLS]" % (line2, line))
             else:
-                print("2 [CLS] %s [SEP] %s" % (line, line2))
+                print("2 %s [SEP] %s [CLS]" % (line, line2))
         else:
             if random.choice([1,2]) == 1:
-                print("3 [CLS] %s [SEP] %s" % (line2, line))
+                print("3 %s [SEP] %s [CLS]" % (line2, line))
             else:
-                print("4 [CLS] %s [SEP] %s" % (line, line2))
+                print("4 %s [SEP] %s [CLS]" % (line, line2))
 

@@ -164,13 +164,14 @@ def evaluate(eval_model, tag_data):
         target_true = 0.
         predicted_true = 0.
         correct_true = 0.
+        unks_count = 0.
         for batch, sample in enumerate(tag_loader):
 
             data = sample[0].to(torch.int64).to(device)
             targets = sample[1].to(torch.int64).to(device)
             tag_output = eval_model(data)[0]
 
-#            for i,x in enumerate(data[-1][1:]):
+#            for i,x in enumerate(data[0][:-1]):
 #                if x == 0: 
 #                    break
 #                print (reverse_vocab[int(x)], targets[-1][i], torch.round(torch.sigmoid(tag_output[-1][i])))
@@ -182,9 +183,7 @@ def evaluate(eval_model, tag_data):
             target_true += torch.sum(target_disfluencies).float()
             predicted_true += torch.sum(predicted_disfluencies).float()
             correct_true += torch.sum(target_disfluencies * predicted_disfluencies).float()
-
-
-
+ 
     recall = correct_true / target_true
     precision = correct_true / predicted_true
     f1_score = 2 * precision * recall / (precision + recall)

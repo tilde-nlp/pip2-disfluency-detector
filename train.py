@@ -133,9 +133,9 @@ def train(tag_data, cls_data, sched_interval):
         data = sample[0].to(torch.int64).to(device)
         targets = sample[1].to(torch.int64).to(device)
         optimizer.zero_grad()
-#        cls_output = model(data)[1]
-#        loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
-#        cls_loss += loss.item()
+        cls_output = model(data)[1]
+        loss = cls_criterion(cls_output.view(-1, nclstokens), targets.view(-1))
+        cls_loss += loss.item()
 
         # tag loss
         sample = next(tag_batch)
@@ -145,7 +145,7 @@ def train(tag_data, cls_data, sched_interval):
         targets_flat = (targets == 2).float().to(device).view(-1)
         tag_output = model(data)[0]
         tag_criterion = nn.BCEWithLogitsLoss(weight=mask)#,pos_weight=torch.tensor(2.).to(device))
-        loss = tag_criterion(tag_output.view(-1), targets_flat)
+        loss += tag_criterion(tag_output.view(-1), targets_flat)
         
 #        loss = torch.mean(loss)
         loss.backward()
@@ -173,7 +173,7 @@ def train(tag_data, cls_data, sched_interval):
             print('| epoch {:3d} | {:5d}/{:5d} batches | '
                   'lr {:02.8f} | ms/batch {:5.2f} | '
                   'loss {:5.5f}/{:5.5f}/{:5.5f} '.format(
-                    epoch, batch, len(cls_data) // cls_batch_size, scheduler.get_lr()[0],
+                    epoch, batch, len(cls_data) // cls_batch_size, scheduler.get_last_lr()[0],
                     elapsed * 1000 / log_interval,
                     cur_loss - cls_loss, cls_loss, cur_loss))
             cls_loss = 0
@@ -181,7 +181,7 @@ def train(tag_data, cls_data, sched_interval):
             start_time = time.time()
 
             # save the final model iteration
-            # torch.save(transformer.state_dict(), "final.mdl")
+            torch.save(transformer.state_dict(), "final.mdl")
 
 
 
