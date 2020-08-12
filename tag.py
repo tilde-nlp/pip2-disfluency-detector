@@ -110,6 +110,8 @@ def tag(eval_model, tag_data):
                 o_vote = 0
                 delim = ""
                 for i,x in enumerate(data[j]):
+                    if x == 1:
+                        sys.stderr.write("<unk> detected at pos %d %d\n" % (batch*tag_batch_size+j, i))
                     if x == 0 or int(x) == input_vocab["[CLS]"]:
                         break
                     if tag_output[j][i]>0.5:

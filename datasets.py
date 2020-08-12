@@ -67,9 +67,7 @@ class TaggingInferenceDataSet(TaggingDataSet):
         for chunk in pd.read_csv(self._file_path, chunksize=chunksize, header=None):
             for i in range(0,len(chunk)):
                 if self.bpe:
-                    import sys
-                    sys.stderr.write(" ".join(self.bpe.segment(chunk.iloc[i,0]).split()))
-                    tokens = np.array([self._vocab.get(x, 1) for x in self.bpe.segment(chunk.iloc[i,0]).split()])
+                    tokens = np.array([self._vocab.get(x, 1) for x in self.bpe.segment(chunk.iloc[i,0]).split()]+[self._vocab["[CLS]"]])
                 else:
                     tokens = np.array([self._vocab.get(x, 1) for x in chunk.iloc[i,0].split()])
                 if len(tokens) > 128: # or len(tokens) < 3:
