@@ -18,17 +18,25 @@ Then, corpus should be tokenized, lowercased, filtered from punctuation and
 other non-word tokens and split into files train.txt, dev.txt, test.txt
 
 You will also need some amount of labelled data that should stored in the file tune.txt in following format:
-> each:O utterance:O in:O separate:O line:O lowercased:O without:O punctuation:O with:O disfluent:D words:O tagged:O with:O D:O
+```
+each:O utterance:O in:O separate:O line:O lowercased:O without:O punctuation:O with:O disfluent:D words:O tagged:O with:O D:O
+```
 
 Run following command to parse tune.txt file and prepare data for fine-tunning:
-> make tune.tag
+```bash
+make tune.tag
+```
 
 Then, to train a model run:
-> make tune.mdl
+```bash
+make tune.mdl
+```
 
 ### Inference
 To tag a .txt file:
-> python3 tag.py --iter tune.mdl < input.txt > output.tags
+```bash
+python3 tag.py --iter tune.mdl < input.txt > output.tags
+```
 
 ## REFERENCES
 Code is based on idea described in:
