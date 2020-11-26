@@ -17,6 +17,8 @@ for line in sys.stdin:
             sys.stderr.write("Error at line %d, token %s\n" % (ln,token))
             sys.exit(1)
         word = token[0]
+        if not word.isupper():
+            word = word.lower()
         label = token[1]
         words.append(word)
         labels.append("D" if label == "D" else "O")

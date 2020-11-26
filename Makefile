@@ -31,5 +31,14 @@ vocab: bpe.model atoms chars
 final.mdl: train.cls train.tag dev.cls dev.tag vocab
 	python3 train.py
 
-tune.mdl: final.mdl tune.tag
-	python3 tune.py --iter final.mdl . tune.tag
+tune.mdl: final.mdl tune.testtag
+	python3 tune.py --iter final.mdl . tune.testtag
+
+%.mdl: %.testtag final.mdl 
+	python3 tune.py --iter final.mdl . $<
+	mv tune.mdl $@
+
+%.testtag: %.txt bpe.model atoms 1grams
+	./prepare_tag.py < $< |\
+	./bpe.py -c bpe.model --atoms atoms |\
+	./fix_bpe_tags.py > $@

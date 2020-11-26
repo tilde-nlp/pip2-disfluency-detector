@@ -24,7 +24,7 @@ each:O utterance:O in:O separate:O line:O lowercased:O without:O punctuation:O w
 
 Run following command to parse tune.txt file and prepare data for fine-tunning:
 ```bash
-make tune.tag
+make tune.testtag
 ```
 
 Then, to train a model run:
@@ -35,7 +35,7 @@ make tune.mdl
 ### Inference
 To tag a .txt file:
 ```bash
-python3 tag.py --iter tune.mdl < input.txt > output.tags
+python3 tag.py --iter tune.mdl . input.txt > output.tags
 ```
 
 ## REFERENCES
